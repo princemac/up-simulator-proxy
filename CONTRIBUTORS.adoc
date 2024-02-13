@@ -1,0 +1,10 @@
+= Eclipse uProtocol Contributors
+
+These are the major contributor to Eclipse uPlatform Simulator Proxy
+
+|===
+| GitHub username | Name
+
+|https://github.com/neelam-kushwah[neelam-kushwah] |Neelam Kushwah
+
+|===
