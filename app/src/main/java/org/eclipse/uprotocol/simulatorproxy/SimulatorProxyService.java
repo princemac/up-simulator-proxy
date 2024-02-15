@@ -64,10 +64,10 @@ import java.util.concurrent.Executors;
 
 public class SimulatorProxyService extends Service {
 
-    public static final String LOG_TAG = "AndroidProxy";
+    public static final String LOG_TAG = "SimulatorProxy";
 
-    private static final String CHANNEL_ID = "AndroidProxyServiceChannel";
-    private static final UEntity AP_ENTITY = UEntity.newBuilder().setName("android.proxy").setVersionMajor(1).build();
+    private static final String CHANNEL_ID = "SimulatorProxyServiceChannel";
+    private static final UEntity AP_ENTITY = UEntity.newBuilder().setName("simulator.proxy").setVersionMajor(1).build();
     private static final UListener mUListener = SimulatorProxyService::handleMessage;
     @SuppressLint("StaticFieldLeak")
     static Context context;
@@ -168,7 +168,7 @@ public class SimulatorProxyService extends Service {
     }
 
     static void sendTopicUpdateToHost(UMessage umessage) {
-        String topic = LongUriSerializer.instance().serialize(umessage.getSource());
+        String topic = LongUriSerializer.instance().serialize(umessage.getAttributes().getSource());
         JSONObject jsonObj = new JSONObject();
         String serializedMsg = Base64ProtobufSerializer.deserialize(umessage.toByteArray());
         try {
@@ -196,9 +196,8 @@ public class SimulatorProxyService extends Service {
         }
     }
 
-    public static void handleMessage(@NonNull UUri source, @NonNull UPayload payload, @NonNull UAttributes attributes) {
-        UMessage umsg = UMessage.newBuilder().setSource(source).setAttributes(attributes).setPayload(payload).build();
-        sendTopicUpdateToHost(umsg);
+    public static void handleMessage(@NonNull UMessage message) {
+        sendTopicUpdateToHost(message);
 
     }
 
@@ -377,7 +376,7 @@ public class SimulatorProxyService extends Service {
             byte[] umsgBytes = Base64ProtobufSerializer.serialize(data);
             try {
                 UMessage message = UMessage.parseFrom(umsgBytes);
-                CompletionStage<UMessage> payloadCompletionStage = mUPClient.invokeMethod(message.getSource(), message.getPayload(), CallOptions.DEFAULT);
+                CompletionStage<UMessage> payloadCompletionStage = mUPClient.invokeMethod(message.getAttributes().getSource(), message.getPayload(), CallOptions.DEFAULT);
                 payloadCompletionStage.whenComplete((responseData, exception) -> {
                     Log.i(LOG_TAG, "received response");
                     if (exception != null) {
@@ -404,7 +403,7 @@ public class SimulatorProxyService extends Service {
             byte[] umsgBytes = Base64ProtobufSerializer.serialize(data);
             try {
                 UMessage message = UMessage.parseFrom(umsgBytes);
-                String methodUri = LongUriSerializer.instance().serialize(message.getSource());
+                String methodUri = LongUriSerializer.instance().serialize(message.getAttributes().getSource());
                 //set rpc response to bus
                 if (Constants.COMPLETE_FUTURE_REQ_RES.containsKey(methodUri)) {
 
@@ -495,7 +494,7 @@ public class SimulatorProxyService extends Service {
             byte[] umsgBytes = Base64ProtobufSerializer.serialize(data);
             try {
                 UMessage message = UMessage.parseFrom(umsgBytes);
-                String entity = message.getSource().getEntity().getName();
+                String entity = message.getAttributes().getSource().getEntity().getName();
                 //perform send
                 Log.i(LOG_TAG, "Call Publish api (send)");
                 BaseService serviceClass = Constants.ENTITY_BASESERVICE.get(entity);

@@ -117,7 +117,7 @@ public class BaseService extends Service {
 
     public UStatus publish(@NonNull UMessage message) {
         final UStatus status = mUPClient.send(message);
-        logStatus("publish", status, Key.TOPIC, stringify(message.getSource()));
+        logStatus("publish", status, Key.TOPIC, stringify(message.getAttributes().getSource()));
         return status;
     }
 
