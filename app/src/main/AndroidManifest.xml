@@ -31,7 +31,7 @@
             android:exported="false">
             <meta-data
                 android:name="uprotocol.entity.name"
-                android:value="android.proxy" />
+                android:value="simulator.proxy" />
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
