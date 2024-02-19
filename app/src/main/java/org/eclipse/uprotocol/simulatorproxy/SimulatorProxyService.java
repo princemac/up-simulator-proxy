@@ -46,6 +46,7 @@ import org.eclipse.uprotocol.v1.UMessage;
 import org.eclipse.uprotocol.v1.UPayload;
 import org.eclipse.uprotocol.v1.UStatus;
 import org.eclipse.uprotocol.v1.UUri;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -349,6 +350,7 @@ public class SimulatorProxyService extends Service {
                             case Constants.ACTION_REGISTER_RPC -> performRegisterRPC(data);
                             case Constants.ACTION_RPC_RESPONSE -> performRpcResponse(data);
                             case Constants.ACTION_INVOKE_METHOD -> performInvokeMethod(data);
+                            case Constants.ACTION_CREATE_TOPIC -> performCreateTopic(data,jsonObj.getJSONArray("topics"));
 
                             default -> {
                             }
@@ -419,6 +421,32 @@ public class SimulatorProxyService extends Service {
             }
         }
 
+        private void performCreateTopic(String entity, JSONArray topics){
+            if (Constants.ENTITY_BASESERVICE.containsKey(entity)){
+                BaseService serviceClass = Constants.ENTITY_BASESERVICE.get(entity);
+                for (int i = 0; i < topics.length(); i++) {
+                    String topic = null;
+                    try {
+                        topic = topics.getString(i);
+                        CompletableFuture<UStatus> topicFuture = serviceClass.createTopic(LongUriSerializer.instance().deserialize(topic));
+                        topicFuture.whenComplete((uStatus, throwable) -> {
+                            if (throwable != null) {
+                                Log.e(LOG_TAG, "Failed to create topic", throwable);
+                                uStatus = toStatus(throwable);
+
+                            }
+                            sendStatusToHost(clientSocket, uStatus, Constants.STATUS_CREATE_TOPIC_STATUS);
+                        });
+                    } catch (JSONException e) {
+                        throw new RuntimeException(e);
+                    }
+
+                }
+            }else{
+                Log.i(LOG_TAG, "Can't create topic, Android service not found for entity: " +entity);
+
+            }
+        }
         private void performRegisterRPC(String data) {
             byte[] uriBytes = Base64ProtobufSerializer.serialize(data);
             UUri uUri = UUri.getDefaultInstance();

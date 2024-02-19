@@ -22,8 +22,9 @@ public class Constants {
     public static final String STATUS_PUBLISH = "publish_status";
     public static final String UPDATE_TOPIC = "topic_update";
     public static final String STATUS_SUBSCRIBE = "subscribe_status";
+    public static final String STATUS_CREATE_TOPIC_STATUS = "create_topic_status";
+
     public static final String STATUS_REGISTER_RPC= "register_rpc_status";
-    public static final String STATUS_SEND_RPC= "send_rpc_status";
 
     public static final String ACTION_START_SERVICE = "start_service";
     public static final String ACTION_PUBLISH = "publish";
@@ -32,6 +33,8 @@ public class Constants {
     public static final String ACTION_SUBSCRIBE = "subscribe";
     public static final String ACTION_REGISTER_RPC = "register_rpc";
     public static final String ACTION_INVOKE_METHOD = "send_rpc";
+    public static final String ACTION_CREATE_TOPIC = "create_topic";
+
     public static final Map<String, ArrayList<Socket>> TOPIC_SOCKET_LIST = new HashMap<>();
     public static final Map<String, Socket> RPC_SOCKET_LIST = new HashMap<>();
 
