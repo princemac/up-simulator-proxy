@@ -85,19 +85,7 @@ public class BaseService extends Service {
             logStatus("connect", status);
             return isOk(status) ? CompletableFuture.completedFuture(status) : CompletableFuture.failedFuture(new UStatusException(status));
         });
-//                .thenCompose(it -> {
-//            List<CompletableFuture<UStatus>> topicFutures = new ArrayList<>();
-//            for (UUri topic : topics) {
-//                CompletableFuture<UStatus> topicFuture = createTopic(topic);
-//                topicFutures.add(topicFuture);
-//            }
-//             register rpc only when there is request from host
-//            for (String rpc : getAllRPCNames(serviceDescriptor)) {
-//                CompletableFuture<UStatus> topicFuture = registerMethod(UUri.newBuilder(SERVICE_URI).setResource(UResourceBuilder.forRpcRequest(rpc)).build());
-//                topicFutures.add(topicFuture);
-//            }
-//            return CompletableFuture.allOf(topicFutures.toArray(new CompletableFuture[0]));
-//        });
+
 
         Constants.ENTITY_BASESERVICE.put(SERVICE.getName(), BaseService.this);
     }
