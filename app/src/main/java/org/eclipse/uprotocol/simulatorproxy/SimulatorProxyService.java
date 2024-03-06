@@ -1,3 +1,26 @@
+/*
+ * Copyright (c) 2024 General Motors GTO LLC
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ * SPDX-FileType: SOURCE
+ * SPDX-FileCopyrightText: 2024 General Motors GTO LLC
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package org.eclipse.uprotocol.simulatorproxy;
 
 
@@ -37,7 +60,6 @@ import org.eclipse.uprotocol.core.usubscription.v3.USubscription;
 import org.eclipse.uprotocol.core.usubscription.v3.UnsubscribeRequest;
 import org.eclipse.uprotocol.rpc.CallOptions;
 import org.eclipse.uprotocol.simulatorproxy.utils.Constants;
-import org.eclipse.uprotocol.simulatorproxy.utils.Utils;
 import org.eclipse.uprotocol.transport.UListener;
 import org.eclipse.uprotocol.uri.serializer.LongUriSerializer;
 import org.eclipse.uprotocol.v1.UAttributes;
@@ -70,7 +92,6 @@ public class SimulatorProxyService extends Service {
 
     private static final String CHANNEL_ID = "SimulatorProxyServiceChannel";
     private static final UEntity AP_ENTITY = UEntity.newBuilder().setName("simulator.proxy").setVersionMajor(1).build();
-    private static final UListener mUListener = SimulatorProxyService::handleMessage;
     @SuppressLint("StaticFieldLeak")
     static Context context;
     private static USubscription.Stub mUSubscriptionStub;
@@ -109,14 +130,14 @@ public class SimulatorProxyService extends Service {
                 return registerStatus;
             }
             String topic_uri = LongUriSerializer.instance().serialize(topic);
-            ArrayList<Socket> arr = new ArrayList<>();
-            if (Constants.TOPIC_SOCKET_LIST.containsKey(topic_uri)) {
-                arr = Constants.TOPIC_SOCKET_LIST.get(topic_uri);
-            }
-            if (arr != null && !arr.contains(clientSocket)) {
+            // Get the list directly or create a new one if it doesn't exist
+            ArrayList<Socket> arr = Constants.TOPIC_SOCKET_MAP.getOrDefault(topic_uri, new ArrayList<>());
+
+            // Add the clientSocket if it's not already present
+            if (!arr.contains(clientSocket)) {
                 arr.add(clientSocket);
+                Constants.TOPIC_SOCKET_MAP.put(topic_uri, arr); // Update the map only if necessary
             }
-            Constants.TOPIC_SOCKET_LIST.put(topic_uri, arr);
             final SubscriptionStatus status = subscriptionResponse.getStatus();
             logStatus("subscribe", buildStatus(status.getCode(), status.getMessage()), Key.TOPIC, stringify(topic), Key.STATE, status.getState());
             return UStatus.newBuilder().setCode(status.getCode()).setMessage(status.getMessage()).build();
@@ -124,9 +145,22 @@ public class SimulatorProxyService extends Service {
     }
 
     public static @NonNull CompletableFuture<UStatus> registerListener(@NonNull UUri topic) {
+        UListener listener = SimulatorProxyService::handleMessage;
+        // We need to pass a new listener every time to the ubus to retrieve the latest published data.
+        // If we use a common listener, the ubus won't notify it again if it has already dispatched the
+        // event to this listener.
+        // Our use case involves multiple Python apps or clients subscribing to the topic and listening
+        // for data. Since the simulator proxy is common for them, we should create a new listener every time
+        // to retrieve the latest published data from the bus. If we fail to do this, one Python app will receive
+        // the latest published data while the other app will not receive it if it subscribes to the topic.
+        String topic_str = LongUriSerializer.instance().serialize(topic);
+        if (Constants.TOPIC_LISTENER_MAP.containsKey(topic_str)) {
+            unregisterListener(topic, Constants.TOPIC_LISTENER_MAP.get(topic_str));
+        }
         return CompletableFuture.supplyAsync(() -> {
 
-            final UStatus status = mUPClient.registerListener(topic, mUListener);
+            final UStatus status = mUPClient.registerListener(topic, listener);
+            Constants.TOPIC_LISTENER_MAP.put(topic_str, listener);
             return logStatus("registerListener", status, Key.TOPIC, stringify(topic));
         });
     }
@@ -179,7 +213,7 @@ public class SimulatorProxyService extends Service {
         try {
             jsonObj.put(Constants.ACTION, Constants.UPDATE_TOPIC);
             jsonObj.put(Constants.ACTION_DATA, serializedMsg);
-            List<Socket> socketList = Constants.TOPIC_SOCKET_LIST.get(topic);
+            List<Socket> socketList = Constants.TOPIC_SOCKET_MAP.get(topic);
             if (socketList != null) {
                 socketList.forEach(socket -> {
                     try {
@@ -206,6 +240,15 @@ public class SimulatorProxyService extends Service {
 
     }
 
+    public static @NonNull CompletableFuture<UStatus> unregisterListener(@NonNull UUri topic, UListener listener) {
+        return CompletableFuture.supplyAsync(() -> {
+            final UStatus status = mUPClient.unregisterListener(topic, listener);
+            Constants.TOPIC_LISTENER_MAP.remove(LongUriSerializer.instance().serialize(topic));
+
+            return logStatus("unregisterListener", status, Key.TOPIC, stringify(topic));
+        });
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -226,8 +269,6 @@ public class SimulatorProxyService extends Service {
         });
 
         startServer();
-        Utils.readResourceCatalog(this);
-
 
     }
 
@@ -294,22 +335,20 @@ public class SimulatorProxyService extends Service {
         return builder.setContentTitle("Foreground Service").setContentText("Running...").build();
     }
 
-    public @NonNull CompletableFuture<UStatus> unregisterListener(@NonNull UUri topic) {
-        return CompletableFuture.supplyAsync(() -> {
-            final UStatus status = mUPClient.unregisterListener(topic, mUListener);
-            return logStatus("unregisterListener", status, Key.TOPIC, stringify(topic));
-        });
-    }
-
     @SuppressWarnings("SameParameterValue")
     public CompletableFuture<UStatus> unsubscribe(@NonNull UUri topic) {
+        String topic_str = LongUriSerializer.instance().serialize(topic);
+        UListener listener = null;
+        if (Constants.TOPIC_LISTENER_MAP.containsKey(topic_str)) {
+            listener = Constants.TOPIC_LISTENER_MAP.get(topic_str);
+        }
         final CompletionStage<UStatus> unsubscribeStage = mUSubscriptionStub.unsubscribe(UnsubscribeRequest.newBuilder().setTopic(topic).setSubscriber(SubscriberInfo.newBuilder().setUri(mUPClient.getUri()).build()).build()).whenComplete((status, exception) -> {
             if (exception != null) { // Communication failure
                 status = toStatus(exception);
                 logStatus("unsubscribe", status, Key.TOPIC, stringify(topic));
             }
         });
-        return unregisterListener(topic).thenCombine(unsubscribeStage, (unregisterStatus, unsubscribeStatus) -> {
+        return unregisterListener(topic, listener).thenCombine(unsubscribeStage, (unregisterStatus, unsubscribeStatus) -> {
             if (!isOk(unregisterStatus)) {
                 return unregisterStatus;
             }
@@ -383,7 +422,7 @@ public class SimulatorProxyService extends Service {
             byte[] umsgBytes = Base64ProtobufSerializer.serialize(data);
             try {
                 UMessage message = UMessage.parseFrom(umsgBytes);
-                CompletionStage<UMessage> payloadCompletionStage = mUPClient.invokeMethod(message.getAttributes().getSource(), message.getPayload(), CallOptions.DEFAULT);
+                CompletionStage<UMessage> payloadCompletionStage = mUPClient.invokeMethod(message.getAttributes().getSink(), message.getPayload(), CallOptions.DEFAULT);
                 payloadCompletionStage.whenComplete((responseData, exception) -> {
                     Log.i(LOG_TAG, "received response");
                     if (exception != null) {
@@ -410,7 +449,7 @@ public class SimulatorProxyService extends Service {
             byte[] umsgBytes = Base64ProtobufSerializer.serialize(data);
             try {
                 UMessage message = UMessage.parseFrom(umsgBytes);
-                String methodUri = LongUriSerializer.instance().serialize(message.getAttributes().getSource());
+                String methodUri = LongUriSerializer.instance().serialize(message.getAttributes().getSink());
                 //set rpc response to bus
                 if (Constants.COMPLETE_FUTURE_REQ_RES.containsKey(methodUri)) {
 
