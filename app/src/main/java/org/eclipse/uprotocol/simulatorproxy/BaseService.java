@@ -33,7 +33,6 @@ import org.eclipse.uprotocol.core.usubscription.v3.CreateTopicRequest;
 import org.eclipse.uprotocol.core.usubscription.v3.USubscription;
 import org.eclipse.uprotocol.rpc.URpcListener;
 import org.eclipse.uprotocol.simulatorproxy.utils.Constants;
-import org.eclipse.uprotocol.simulatorproxy.utils.Utils;
 import org.eclipse.uprotocol.uri.factory.UResourceBuilder;
 import org.eclipse.uprotocol.uri.serializer.LongUriSerializer;
 import org.eclipse.uprotocol.v1.UEntity;
@@ -79,8 +78,6 @@ public class BaseService extends Service {
             }
         });
         mUSubscriptionStub = USubscription.newStub(mUPClient);
-        List<UUri> topics = Utils.readTopicsFromEntity(SERVICE.getName());
-
         mUPClient.connect().thenCompose(status -> {
             logStatus("connect", status);
             return isOk(status) ? CompletableFuture.completedFuture(status) : CompletableFuture.failedFuture(new UStatusException(status));

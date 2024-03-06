@@ -37,7 +37,6 @@ import org.eclipse.uprotocol.core.usubscription.v3.USubscription;
 import org.eclipse.uprotocol.core.usubscription.v3.UnsubscribeRequest;
 import org.eclipse.uprotocol.rpc.CallOptions;
 import org.eclipse.uprotocol.simulatorproxy.utils.Constants;
-import org.eclipse.uprotocol.simulatorproxy.utils.Utils;
 import org.eclipse.uprotocol.transport.UListener;
 import org.eclipse.uprotocol.uri.serializer.LongUriSerializer;
 import org.eclipse.uprotocol.v1.UAttributes;
@@ -247,8 +246,6 @@ public class SimulatorProxyService extends Service {
         });
 
         startServer();
-        Utils.readResourceCatalog(this);
-
 
     }
 
@@ -402,7 +399,7 @@ public class SimulatorProxyService extends Service {
             byte[] umsgBytes = Base64ProtobufSerializer.serialize(data);
             try {
                 UMessage message = UMessage.parseFrom(umsgBytes);
-                CompletionStage<UMessage> payloadCompletionStage = mUPClient.invokeMethod(message.getAttributes().getSource(), message.getPayload(), CallOptions.DEFAULT);
+                CompletionStage<UMessage> payloadCompletionStage = mUPClient.invokeMethod(message.getAttributes().getSink(), message.getPayload(), CallOptions.DEFAULT);
                 payloadCompletionStage.whenComplete((responseData, exception) -> {
                     Log.i(LOG_TAG, "received response");
                     if (exception != null) {
@@ -429,7 +426,7 @@ public class SimulatorProxyService extends Service {
             byte[] umsgBytes = Base64ProtobufSerializer.serialize(data);
             try {
                 UMessage message = UMessage.parseFrom(umsgBytes);
-                String methodUri = LongUriSerializer.instance().serialize(message.getAttributes().getSource());
+                String methodUri = LongUriSerializer.instance().serialize(message.getAttributes().getSink());
                 //set rpc response to bus
                 if (Constants.COMPLETE_FUTURE_REQ_RES.containsKey(methodUri)) {
 

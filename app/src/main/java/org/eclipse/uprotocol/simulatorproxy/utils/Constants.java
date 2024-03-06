@@ -36,7 +36,6 @@ public class Constants {
     public static final Map<String, ArrayList<Socket>> TOPIC_SOCKET_MAP = new HashMap<>();
     public static final Map<String, Socket> RPC_SOCKET_LIST = new HashMap<>();
     public static HashMap<String, UListener> TOPIC_LISTENER_MAP = new HashMap<>();
-    public static HashMap<String, String> RESOURCE_CATALOG = new HashMap<>();
 
 
 }
