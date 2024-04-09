@@ -64,10 +64,14 @@ dependencies {
     implementation libs.androidx.annotation
     implementation libs.androidx.appcompat
     implementation libs.android.material
-    implementation libs.up.client.android.java
-    implementation libs.up.java
-    implementation libs.opencsv
+    implementation (libs.up.java){
+        exclude group: 'org.eclipse.uprotocol', module: 'uprotocol-core-api'
+    }
     implementation libs.grpc.protobuf
-    implementation files('libs/uservices-api-0.1.0-SNAPSHOT.jar')
+    implementation (libs.covesa.uservices)
+    {
+        exclude group: 'org.eclipse.uprotocol', module: 'uprotocol-core-api'
+    }
+    implementation libs.up.client.android.java
 
 }

@@ -35,7 +35,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public class Constants {
-    public static final HashMap<String, CompletableFuture<UPayload>> COMPLETE_FUTURE_REQ_RES = new HashMap<>();
     public static final HashMap<String, BaseService> ENTITY_BASESERVICE = new HashMap<>();
     public static final Map<String, Class<? extends BaseService>> ENTITY_SERVICE_MAP = new HashMap<>();
     public static final Map<String, Socket> ENTITY_SOCKET = new HashMap<>();

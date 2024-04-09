@@ -54,13 +54,12 @@ import org.eclipse.uprotocol.common.UStatusException;
 import org.eclipse.uprotocol.common.util.log.Key;
 import org.eclipse.uprotocol.core.usubscription.v3.CreateTopicRequest;
 import org.eclipse.uprotocol.core.usubscription.v3.USubscription;
-import org.eclipse.uprotocol.rpc.URpcListener;
 import org.eclipse.uprotocol.simulatorproxy.utils.Constants;
+import org.eclipse.uprotocol.transport.UListener;
 import org.eclipse.uprotocol.uri.factory.UResourceBuilder;
 import org.eclipse.uprotocol.uri.serializer.LongUriSerializer;
 import org.eclipse.uprotocol.v1.UEntity;
 import org.eclipse.uprotocol.v1.UMessage;
-import org.eclipse.uprotocol.v1.UPayload;
 import org.eclipse.uprotocol.v1.UStatus;
 import org.eclipse.uprotocol.v1.UUri;
 import org.json.JSONException;
@@ -79,13 +78,27 @@ import java.util.concurrent.Executors;
 public class BaseService extends Service {
     public static final String CHANNEL_ID = "BaseService";
     private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
-    private final URpcListener mURpcListener = this::handleRequestMessage;
+    private final UListener mURpcListener = this::handleRequestMessage;
     private Descriptors.ServiceDescriptor serviceDescriptor;
     private UUri SERVICE_URI;
     private String TAG;
     private UPClient mUPClient;
     private USubscription.Stub mUSubscriptionStub;
 
+    static synchronized void sendRpcRequestToHost(Socket mClientSocket, UMessage requestMessage) {
+        JSONObject jsonObj = new JSONObject();
+        try {
+            PrintWriter wr = new PrintWriter(mClientSocket.getOutputStream());
+            String serializedMsg = Base64ProtobufSerializer.deserialize(requestMessage.toByteArray());
+            jsonObj.put(Constants.ACTION, Constants.ACTION_RPC_REQUEST);
+            jsonObj.put(Constants.ACTION_DATA, serializedMsg);
+            Log.d(LOG_TAG, "Sending rpc request to host: " + jsonObj);
+            wr.println(jsonObj);
+            wr.flush();
+        } catch (JSONException | IOException e) {
+            Log.e(LOG_TAG, Objects.requireNonNullElse(e.getMessage(), "Exception occurs while sending rpc request to host"));
+        }
+    }
 
     public void initializeUPClient(Descriptors.ServiceDescriptor serviceDescriptor) {
         this.serviceDescriptor = serviceDescriptor;
@@ -117,9 +130,8 @@ public class BaseService extends Service {
     }
 
     public UStatus registerMethod(@NonNull UUri methodUri) {
-            final UStatus status = mUPClient.registerRpcListener(methodUri, mURpcListener);
-
-            return logStatus("registerMethod", status, Key.URI, stringify(methodUri));
+        final UStatus status = mUPClient.registerListener(methodUri, mURpcListener);
+        return logStatus("registerMethod", status, Key.URI, stringify(methodUri));
 
     }
 
@@ -129,9 +141,15 @@ public class BaseService extends Service {
         return status;
     }
 
+    public UStatus send_response(@NonNull UMessage message) {
+        final UStatus status = mUPClient.send(message);
+        logStatus("successfully send rpc response", status, Key.TOPIC, stringify(message.getAttributes().getSource()));
+        return status;
+    }
+
     private CompletableFuture<UStatus> unregisterMethod(@NonNull UUri methodUri) {
         return CompletableFuture.supplyAsync(() -> {
-            final UStatus status = mUPClient.unregisterRpcListener(methodUri, mURpcListener);
+            final UStatus status = mUPClient.unregisterListener(methodUri, mURpcListener);
             return logStatus("unregisterMethod", status, Key.URI, stringify(methodUri));
         });
     }
@@ -149,34 +167,20 @@ public class BaseService extends Service {
         return START_NOT_STICKY;
     }
 
-    private void handleRequestMessage(@NonNull UMessage requestMessage, @NonNull CompletableFuture<UPayload> responseFuture) {
+    private void handleRequestMessage(@NonNull UMessage requestMessage) {
+        System.out.println("Request received");
         final UUri methodUri = requestMessage.getAttributes().getSink();
 
-        String uri= LongUriSerializer.instance().serialize(methodUri);
-        //save responseFuture to send rpc response received from mock service to Bus.
-        Constants.COMPLETE_FUTURE_REQ_RES.put(uri, responseFuture);
-        // Send this request to python service and set the response to completable future
-        if(Constants.RPC_SOCKET_LIST.containsKey(uri)){
-            Socket socket=Constants.RPC_SOCKET_LIST.get(uri);
+        String uri = LongUriSerializer.instance().serialize(methodUri);
+
+        // Send this request to python service
+        if (Constants.RPC_SOCKET_LIST.containsKey(uri)) {
+            Socket socket = Constants.RPC_SOCKET_LIST.get(uri);
             //write data to socket
-           if(socket != null)
-            sendRpcRequestToHost(socket,requestMessage);
+            if (socket != null)
+                sendRpcRequestToHost(socket, requestMessage);
         }
 
-    }
-    static synchronized void sendRpcRequestToHost(Socket mClientSocket, UMessage requestMessage) {
-        JSONObject jsonObj = new JSONObject();
-        try {
-            PrintWriter wr = new PrintWriter(mClientSocket.getOutputStream());
-            String serializedMsg = Base64ProtobufSerializer.deserialize(requestMessage.toByteArray());
-            jsonObj.put(Constants.ACTION, Constants.ACTION_RPC_REQUEST);
-            jsonObj.put(Constants.ACTION_DATA, serializedMsg);
-            Log.d(LOG_TAG, "Sending rpc request to host: " + jsonObj);
-            wr.println(jsonObj);
-            wr.flush();
-        } catch (JSONException | IOException e) {
-            Log.e(LOG_TAG, Objects.requireNonNullElse(e.getMessage(), "Exception occurs while sending rpc request to host"));
-        }
     }
 
     public String getVehicleServiceName() {

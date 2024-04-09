@@ -59,6 +59,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
         <service
             android:name=".vehicleservice.Braking"
@@ -71,6 +72,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
         <service
             android:name=".vehicleservice.CabinClimate"
@@ -83,6 +85,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
         <service
             android:name=".vehicleservice.Chassis"
@@ -95,6 +98,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
         <service
             android:name=".vehicleservice.Engine"
@@ -107,6 +111,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
         <service
             android:name=".vehicleservice.Exterior"
@@ -119,6 +124,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
         <service
             android:name=".vehicleservice.HelloWorld"
@@ -131,6 +137,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
         <service
             android:name=".vehicleservice.Horn"
@@ -143,6 +150,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
         <service
             android:name=".vehicleservice.Suspension"
@@ -155,6 +163,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
 
         <service
@@ -168,6 +177,20 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+            
+        </service>
+        <service
+            android:name=".vehicleservice.Seating"
+            android:enabled="true"
+            android:singleUser="true">
+            <meta-data
+                android:name="uprotocol.entity.name"
+                android:value="body.seating" />
+
+            <meta-data
+                android:name="uprotocol.entity.version"
+                android:value="1" />
+
         </service>
         <service
             android:name=".vehicleservice.Vehicle"
@@ -180,6 +203,7 @@
             <meta-data
                 android:name="uprotocol.entity.version"
                 android:value="1" />
+
         </service>
 
     </application>
