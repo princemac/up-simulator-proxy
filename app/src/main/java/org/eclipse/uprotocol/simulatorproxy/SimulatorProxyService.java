@@ -541,7 +541,7 @@ public class SimulatorProxyService extends Service {
             PackageManager packageManager = context.getPackageManager();
             Class<? extends Service> serviceClass = Constants.ENTITY_SERVICE_MAP.get(entity);
             if (serviceClass != null) {
-                // For now its not needed but once we have the real service, we should disable all the service from the android proxy manifest and enable it only when
+                // For now its not needed but once we have the real service, we should disable all the service from the simulator proxy manifest and enable it only when
                 // there is start service request from host. This is because if we enable it by default, then the real service
                 // information will be replaced in ubus and then ubus wont be able to start the real vehicle service.
 

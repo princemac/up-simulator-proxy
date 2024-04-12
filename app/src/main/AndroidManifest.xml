@@ -51,7 +51,7 @@
         <service
             android:name=".vehicleservice.BodyMirrors"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="body.mirrors" />
@@ -64,7 +64,7 @@
         <service
             android:name=".vehicleservice.Braking"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="chassis.braking" />
@@ -77,7 +77,7 @@
         <service
             android:name=".vehicleservice.CabinClimate"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="body.cabin_climate" />
@@ -90,7 +90,7 @@
         <service
             android:name=".vehicleservice.Chassis"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="chassis" />
@@ -103,7 +103,7 @@
         <service
             android:name=".vehicleservice.Engine"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="propulsion.engine" />
@@ -116,7 +116,7 @@
         <service
             android:name=".vehicleservice.Exterior"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="vehicle.exterior" />
@@ -129,7 +129,7 @@
         <service
             android:name=".vehicleservice.HelloWorld"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="example.hello_world" />
@@ -142,7 +142,7 @@
         <service
             android:name=".vehicleservice.Horn"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="body.horn" />
@@ -155,7 +155,7 @@
         <service
             android:name=".vehicleservice.Suspension"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="chassis.suspension" />
@@ -169,7 +169,7 @@
         <service
             android:name=".vehicleservice.Transmission"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="propulsion.transmission" />
@@ -182,7 +182,7 @@
         <service
             android:name=".vehicleservice.Seating"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="body.seating" />
@@ -195,7 +195,7 @@
         <service
             android:name=".vehicleservice.Vehicle"
             android:enabled="true"
-            android:singleUser="true">
+            >
             <meta-data
                 android:name="uprotocol.entity.name"
                 android:value="vehicle" />
