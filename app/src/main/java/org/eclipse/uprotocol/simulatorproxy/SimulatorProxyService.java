@@ -58,15 +58,16 @@ import org.eclipse.uprotocol.core.usubscription.v3.SubscriptionResponse;
 import org.eclipse.uprotocol.core.usubscription.v3.SubscriptionStatus;
 import org.eclipse.uprotocol.core.usubscription.v3.USubscription;
 import org.eclipse.uprotocol.core.usubscription.v3.UnsubscribeRequest;
-import org.eclipse.uprotocol.rpc.CallOptions;
 import org.eclipse.uprotocol.simulatorproxy.utils.Constants;
 import org.eclipse.uprotocol.transport.UListener;
 import org.eclipse.uprotocol.uri.serializer.LongUriSerializer;
+import org.eclipse.uprotocol.v1.CallOptions;
 import org.eclipse.uprotocol.v1.UAttributes;
 import org.eclipse.uprotocol.v1.UCode;
 import org.eclipse.uprotocol.v1.UEntity;
 import org.eclipse.uprotocol.v1.UMessage;
 import org.eclipse.uprotocol.v1.UPayload;
+import org.eclipse.uprotocol.v1.UPriority;
 import org.eclipse.uprotocol.v1.UStatus;
 import org.eclipse.uprotocol.v1.UUri;
 import org.json.JSONArray;
@@ -92,6 +93,7 @@ public class SimulatorProxyService extends Service {
 
     private static final String CHANNEL_ID = "SimulatorProxyServiceChannel";
     private static final UEntity AP_ENTITY = UEntity.newBuilder().setName("simulator.proxy").setVersionMajor(1).build();
+    private static final CallOptions DEFAULT_OPTIONS = CallOptions.newBuilder().setPriority(UPriority.UPRIORITY_CS4).setTtl(10_000).build();
     @SuppressLint("StaticFieldLeak")
     static Context context;
     private static USubscription.Stub mUSubscriptionStub;
@@ -422,7 +424,7 @@ public class SimulatorProxyService extends Service {
             byte[] umsgBytes = Base64ProtobufSerializer.serialize(data);
             try {
                 UMessage message = UMessage.parseFrom(umsgBytes);
-                CompletionStage<UMessage> payloadCompletionStage = mUPClient.invokeMethod(message.getAttributes().getSink(), message.getPayload(), CallOptions.DEFAULT);
+                CompletionStage<UMessage> payloadCompletionStage = mUPClient.invokeMethod(message.getAttributes().getSink(), message.getPayload(), DEFAULT_OPTIONS);
                 payloadCompletionStage.whenComplete((responseData, exception) -> {
                     Log.i(LOG_TAG, "received response");
                     if (exception != null) {
@@ -449,16 +451,10 @@ public class SimulatorProxyService extends Service {
             byte[] umsgBytes = Base64ProtobufSerializer.serialize(data);
             try {
                 UMessage message = UMessage.parseFrom(umsgBytes);
-                String methodUri = LongUriSerializer.instance().serialize(message.getAttributes().getSink());
-                //set rpc response to bus
-                if (Constants.COMPLETE_FUTURE_REQ_RES.containsKey(methodUri)) {
-
-                    CompletableFuture<UPayload> future = Constants.COMPLETE_FUTURE_REQ_RES.get(methodUri);
-                    if (future != null) {
-                        future.complete(message.getPayload());
-                    }
+                BaseService serviceClass = Constants.ENTITY_BASESERVICE.get(message.getAttributes().getSource().getEntity().getName());
+                if (serviceClass != null) {
+                   serviceClass.send_response(message);
                 }
-
 
             } catch (InvalidProtocolBufferException ex) {
                 ex.printStackTrace();
@@ -545,7 +541,7 @@ public class SimulatorProxyService extends Service {
             PackageManager packageManager = context.getPackageManager();
             Class<? extends Service> serviceClass = Constants.ENTITY_SERVICE_MAP.get(entity);
             if (serviceClass != null) {
-                // For now its not needed but once we have the real service, we should disable all the service from the android proxy manifest and enable it only when
+                // For now its not needed but once we have the real service, we should disable all the service from the simulator proxy manifest and enable it only when
                 // there is start service request from host. This is because if we enable it by default, then the real service
                 // information will be replaced in ubus and then ubus wont be able to start the real vehicle service.
 

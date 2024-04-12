@@ -21,15 +21,17 @@
  * SPDX-FileCopyrightText: 2024 General Motors GTO LLC
  * SPDX-License-Identifier: Apache-2.0
  */
+
 package org.eclipse.uprotocol.simulatorproxy.vehicleservice;
 
 import com.google.protobuf.Descriptors;
+import com.ultifi.vehicle.body.seating.v1.SeatingService;
 
-import org.covesa.uservice.vehicle.v1.VehicleService;
+import org.covesa.uservice.vehicle.body.horn.v1.HornService;
 import org.eclipse.uprotocol.simulatorproxy.BaseService;
 
-public class Vehicle extends BaseService {
-    Descriptors.ServiceDescriptor serviceDescriptor = VehicleService.getDescriptor().findServiceByName("Vehicle");
+public class Seating extends BaseService {
+    Descriptors.ServiceDescriptor serviceDescriptor = SeatingService.getDescriptor().findServiceByName("Seating");
 
     @Override
     public void onCreate() {
@@ -38,3 +40,4 @@ public class Vehicle extends BaseService {
     }
 
 }
+
