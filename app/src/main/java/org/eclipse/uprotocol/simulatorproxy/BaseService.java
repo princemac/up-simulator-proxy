@@ -29,6 +29,10 @@ import static org.eclipse.uprotocol.common.util.log.Formatter.join;
 import static org.eclipse.uprotocol.common.util.log.Formatter.status;
 import static org.eclipse.uprotocol.common.util.log.Formatter.stringify;
 import static org.eclipse.uprotocol.simulatorproxy.SimulatorProxyService.LOG_TAG;
+import static org.eclipse.uprotocol.simulatorproxy.SimulatorProxyService.sendServiceStartStatus;
+import static org.eclipse.uprotocol.v1.UCode.ALREADY_EXISTS;
+import static org.eclipse.uprotocol.v1.UCode.INTERNAL;
+import static org.eclipse.uprotocol.v1.UCode.OK;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -71,6 +75,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -109,8 +114,11 @@ public class BaseService extends Service {
         mUPClient = UPClient.create(getApplicationContext(), SERVICE, mExecutor, (client, ready) -> {
             if (ready) {
                 Log.i(TAG, join(Key.EVENT, "up client connected"));
+                Constants.ENTITY_BASESERVICE.put(SERVICE.getName(), BaseService.this);
+                sendServiceStartStatus(Constants.ENTITY_SOCKET.get(SERVICE.getName()), SERVICE.getName(), OK);
             } else {
                 Log.w(TAG, join(Key.EVENT, "up client unexpectedly disconnected"));
+                sendServiceStartStatus(Constants.ENTITY_SOCKET.get(SERVICE.getName()), SERVICE.getName(), INTERNAL);
             }
         });
         mUSubscriptionStub = USubscription.newStub(mUPClient);
@@ -118,9 +126,6 @@ public class BaseService extends Service {
             logStatus("connect", status);
             return isOk(status) ? CompletableFuture.completedFuture(status) : CompletableFuture.failedFuture(new UStatusException(status));
         });
-
-
-        Constants.ENTITY_BASESERVICE.put(SERVICE.getName(), BaseService.this);
     }
 
     @Override
@@ -141,7 +146,7 @@ public class BaseService extends Service {
         return status;
     }
 
-    public UStatus send_response(@NonNull UMessage message) {
+    public UStatus sendResponse(@NonNull UMessage message) {
         final UStatus status = mUPClient.send(message);
         logStatus("successfully send rpc response", status, Key.TOPIC, stringify(message.getAttributes().getSource()));
         return status;
@@ -158,6 +163,11 @@ public class BaseService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(LOG_TAG, "on start");
+
+        Optional.ofNullable(getVehicleServiceName()).filter(Constants.ENTITY_BASESERVICE::containsKey).filter(
+                Constants.ENTITY_SOCKET::containsKey).ifPresent(
+                serviceName -> sendServiceStartStatus(Constants.ENTITY_SOCKET.get(serviceName), serviceName,
+                        ALREADY_EXISTS));
 
         createNotificationChannel();
         Intent notificationIntent = new Intent(this, MainActivity.class);

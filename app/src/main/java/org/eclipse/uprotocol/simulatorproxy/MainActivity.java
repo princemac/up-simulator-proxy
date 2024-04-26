@@ -22,6 +22,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 package org.eclipse.uprotocol.simulatorproxy;
+
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
@@ -38,6 +39,7 @@ import org.eclipse.uprotocol.simulatorproxy.vehicleservice.Engine;
 import org.eclipse.uprotocol.simulatorproxy.vehicleservice.Exterior;
 import org.eclipse.uprotocol.simulatorproxy.vehicleservice.HelloWorld;
 import org.eclipse.uprotocol.simulatorproxy.vehicleservice.Horn;
+import org.eclipse.uprotocol.simulatorproxy.vehicleservice.Seating;
 import org.eclipse.uprotocol.simulatorproxy.vehicleservice.Suspension;
 import org.eclipse.uprotocol.simulatorproxy.vehicleservice.Transmission;
 import org.eclipse.uprotocol.simulatorproxy.vehicleservice.Vehicle;
@@ -55,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
         tv.setText(getString(R.string.version) + appVersionName);
 
         // Start the SocketServerService when the activity is created
-        startService(new Intent(this, SimulatorProxyService.class));
+        startForegroundService(new Intent(this, SimulatorProxyService.class));
         //vehicle service will start only when there is request from host
         Constants.ENTITY_SERVICE_MAP.put("body.cabin_climate", CabinClimate.class);
         Constants.ENTITY_SERVICE_MAP.put("body.mirrors", BodyMirrors.class);
@@ -65,10 +67,10 @@ public class MainActivity extends AppCompatActivity {
         Constants.ENTITY_SERVICE_MAP.put("vehicle.exterior", Exterior.class);
         Constants.ENTITY_SERVICE_MAP.put("example.hello_world", HelloWorld.class);
         Constants.ENTITY_SERVICE_MAP.put("body.horn", Horn.class);
+        Constants.ENTITY_SERVICE_MAP.put("body.seating", Seating.class);
         Constants.ENTITY_SERVICE_MAP.put("chassis.suspension", Suspension.class);
         Constants.ENTITY_SERVICE_MAP.put("propulsion.transmission", Transmission.class);
         Constants.ENTITY_SERVICE_MAP.put("vehicle", Vehicle.class);
-
 
     }
 }

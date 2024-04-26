@@ -30,6 +30,7 @@ import static org.eclipse.uprotocol.common.util.UStatusUtils.toStatus;
 import static org.eclipse.uprotocol.common.util.log.Formatter.join;
 import static org.eclipse.uprotocol.common.util.log.Formatter.status;
 import static org.eclipse.uprotocol.common.util.log.Formatter.stringify;
+import static org.eclipse.uprotocol.v1.UCode.NOT_FOUND;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
@@ -98,7 +99,7 @@ public class SimulatorProxyService extends Service {
     static Context context;
     private static USubscription.Stub mUSubscriptionStub;
     private static UPClient mUPClient;
-    private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
+    private static final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     private ServerSocket serverSocket;
     private Thread serverThread;
 
@@ -239,7 +240,6 @@ public class SimulatorProxyService extends Service {
 
     public static void handleMessage(@NonNull UMessage message) {
         sendTopicUpdateToHost(message);
-
     }
 
     public static @NonNull CompletableFuture<UStatus> unregisterListener(@NonNull UUri topic, UListener listener) {
@@ -249,6 +249,15 @@ public class SimulatorProxyService extends Service {
 
             return logStatus("unregisterListener", status, Key.TOPIC, stringify(topic));
         });
+    }
+
+    public static void sendServiceStartStatus(Socket clientSocket, String serviceName, UCode uCode) {
+        if (clientSocket != null) {
+            mExecutor.execute(() -> sendStatusToHost(clientSocket,
+                    UStatus.newBuilder().setMessage(serviceName).setCode(uCode).build(),
+                    Constants.ACTION_START_SERVICE, ""));
+
+        }
     }
 
     @Override
@@ -384,21 +393,23 @@ public class SimulatorProxyService extends Service {
                     // Handle received data as needed
                     Log.d("SocketServerService", "Received data: " + receivedData);
                     try {
-                        JSONObject jsonObj = new JSONObject(receivedData);
-                        String action = jsonObj.getString("action");
-                        String data = jsonObj.getString("data");
+                        for (String recObject : receivedData.split("\n")) {
+                            JSONObject jsonObj = new JSONObject(recObject);
+                            String action = jsonObj.getString("action");
+                            String data = jsonObj.getString("data");
 
-                        switch (action) {
-                            case Constants.ACTION_PUBLISH -> performSend(data);
-                            case Constants.ACTION_START_SERVICE -> startVehicleService(data);
-                            case Constants.ACTION_SUBSCRIBE -> performSubscribe(data);
-                            case Constants.ACTION_REGISTER_RPC -> performRegisterRPC(data);
-                            case Constants.ACTION_RPC_RESPONSE -> performRpcResponse(data);
-                            case Constants.ACTION_INVOKE_METHOD -> performInvokeMethod(data);
-                            case Constants.ACTION_CREATE_TOPIC ->
-                                    performCreateTopic(data, jsonObj.getJSONArray("topics"));
+                            switch (action) {
+                                case Constants.ACTION_PUBLISH -> performSend(data);
+                                case Constants.ACTION_START_SERVICE -> startVehicleService(data);
+                                case Constants.ACTION_SUBSCRIBE -> performSubscribe(data);
+                                case Constants.ACTION_REGISTER_RPC -> performRegisterRPC(data);
+                                case Constants.ACTION_RPC_RESPONSE -> performRpcResponse(data);
+                                case Constants.ACTION_INVOKE_METHOD -> performInvokeMethod(data);
+                                case Constants.ACTION_CREATE_TOPIC ->
+                                        performCreateTopic(data, jsonObj.getJSONArray("topics"));
 
-                            default -> {
+                                default -> {
+                                }
                             }
                         }
 
@@ -453,7 +464,7 @@ public class SimulatorProxyService extends Service {
                 UMessage message = UMessage.parseFrom(umsgBytes);
                 BaseService serviceClass = Constants.ENTITY_BASESERVICE.get(message.getAttributes().getSource().getEntity().getName());
                 if (serviceClass != null) {
-                   serviceClass.send_response(message);
+                   serviceClass.sendResponse(message);
                 }
 
             } catch (InvalidProtocolBufferException ex) {
@@ -549,13 +560,13 @@ public class SimulatorProxyService extends Service {
                  ComponentName componentName = new ComponentName(context, serviceClass);
                  packageManager.setComponentEnabledSetting(componentName, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP);
                  **/
+                Constants.ENTITY_SOCKET.put(entity, this.clientSocket);
                 Intent serviceIntent = new Intent(context, serviceClass);
                 ContextCompat.startForegroundService(context, serviceIntent);
                 Log.i(LOG_TAG, "Starting service for entity: " + entity);
-                Constants.ENTITY_SOCKET.put(entity, this.clientSocket);
             } else {
                 Log.i(LOG_TAG, "Android service not found for entity: " + entity);
-
+                sendServiceStartStatus(this.clientSocket, entity, NOT_FOUND);
             }
         }
 
