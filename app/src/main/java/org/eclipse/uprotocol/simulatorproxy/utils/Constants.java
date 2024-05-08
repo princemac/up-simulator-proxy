@@ -40,6 +40,7 @@ public class Constants {
     public static final Map<String, Socket> ENTITY_SOCKET = new HashMap<>();
     public static final String ACTION = "action";
     public static final String ACTION_DATA = "data";
+    public static final String STATUS_ID = "status_id";
     public static final String STATUS_PUBLISH = "publish_status";
     public static final String UPDATE_TOPIC = "topic_update";
     public static final String STATUS_SUBSCRIBE = "subscribe_status";
