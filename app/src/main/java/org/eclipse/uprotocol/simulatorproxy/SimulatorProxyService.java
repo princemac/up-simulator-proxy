@@ -164,13 +164,14 @@ public class SimulatorProxyService extends Service {
         });
     }
 
-    static synchronized void sendStatusToHost(Socket mClientSocket, UStatus status, String action, String topic) {
+    static synchronized void sendStatusToHost(Socket mClientSocket, UStatus status, String action, String topic, String statusId) {
         JSONObject jsonObj = new JSONObject();
         try {
             PrintWriter wr = new PrintWriter(mClientSocket.getOutputStream());
             String serializedMsg = Base64ProtobufSerializer.deserialize(status.toByteArray());
             jsonObj.put(Constants.ACTION, action);
             jsonObj.put(Constants.ACTION_DATA, serializedMsg);
+            jsonObj.put(Constants.STATUS_ID, statusId);
             if (!TextUtils.isEmpty(topic)) {
                 jsonObj.put("topic", topic);
             }
@@ -251,7 +252,7 @@ public class SimulatorProxyService extends Service {
         if (clientSocket != null) {
             mExecutor.execute(() -> sendStatusToHost(clientSocket,
                     UStatus.newBuilder().setMessage(serviceName).setCode(uCode).build(),
-                    Constants.ACTION_START_SERVICE, ""));
+                    Constants.ACTION_START_SERVICE, "", ""));
 
         }
     }
@@ -393,12 +394,13 @@ public class SimulatorProxyService extends Service {
                             JSONObject jsonObj = new JSONObject(recObject);
                             String action = jsonObj.getString("action");
                             String data = jsonObj.getString("data");
+                            String statusId = jsonObj.optString(Constants.STATUS_ID);
 
                             switch (action) {
                                 case Constants.ACTION_PUBLISH -> performSend(data);
                                 case Constants.ACTION_START_SERVICE -> startVehicleService(data);
-                                case Constants.ACTION_SUBSCRIBE -> performSubscribe(data);
-                                case Constants.ACTION_REGISTER_RPC -> performRegisterRPC(data);
+                                case Constants.ACTION_SUBSCRIBE -> performSubscribe(data, statusId);
+                                case Constants.ACTION_REGISTER_RPC -> performRegisterRPC(data, statusId);
                                 case Constants.ACTION_RPC_RESPONSE -> performRpcResponse(data);
                                 case Constants.ACTION_INVOKE_METHOD -> performInvokeMethod(data);
                                 case Constants.ACTION_CREATE_TOPIC ->
@@ -483,7 +485,7 @@ public class SimulatorProxyService extends Service {
                                 uStatus = toStatus(throwable);
 
                             }
-                            sendStatusToHost(clientSocket, uStatus, Constants.STATUS_CREATE_TOPIC_STATUS, finalTopic);
+                            sendStatusToHost(clientSocket, uStatus, Constants.STATUS_CREATE_TOPIC_STATUS, finalTopic, "");
                         });
                     } catch (JSONException e) {
                         throw new RuntimeException(e);
@@ -496,7 +498,7 @@ public class SimulatorProxyService extends Service {
             }
         }
 
-        private void performRegisterRPC(String data) {
+        private void performRegisterRPC(String data, String statusId) {
             byte[] uriBytes = Base64ProtobufSerializer.serialize(data);
             UUri uUri = UUri.getDefaultInstance();
             try {
@@ -509,7 +511,7 @@ public class SimulatorProxyService extends Service {
                         Constants.RPC_SOCKET_LIST.put(LongUriSerializer.instance().serialize(uUri), this.clientSocket);
                     }
                     //write status to client socket
-                    sendStatusToHost(this.clientSocket, uStatus, Constants.STATUS_REGISTER_RPC, "");
+                    sendStatusToHost(this.clientSocket, uStatus, Constants.STATUS_REGISTER_RPC, "", statusId);
 
                 } else {
                     Log.i(LOG_TAG, "Can't register rpc, Android service not found for entity: " + uUri.getEntity().getName());
@@ -523,7 +525,7 @@ public class SimulatorProxyService extends Service {
             }
         }
 
-        private void performSubscribe(String data) {
+        private void performSubscribe(String data, String statusId) {
             byte[] uriBytes = Base64ProtobufSerializer.serialize(data);
             UUri uUri = UUri.getDefaultInstance();
             try {
@@ -535,7 +537,7 @@ public class SimulatorProxyService extends Service {
                         uStatus = toStatus(throwable);
 
                     }
-                    sendStatusToHost(clientSocket, uStatus, Constants.STATUS_SUBSCRIBE, "");
+                    sendStatusToHost(clientSocket, uStatus, Constants.STATUS_SUBSCRIBE, "", statusId);
                 });
 
 
@@ -578,7 +580,8 @@ public class SimulatorProxyService extends Service {
                 if (serviceClass != null) {
                     UStatus status = serviceClass.publish(message);
                     //write status to client socket
-                    sendStatusToHost(clientSocket, status, Constants.STATUS_PUBLISH, "");
+                    sendStatusToHost(clientSocket, status, Constants.STATUS_PUBLISH, "",
+                            message.getAttributes().getId().toString());
 
                 } else {
                     Log.i(LOG_TAG, "Can't publish, Android service not found for entity: " + entity);
