@@ -77,6 +77,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -215,19 +216,23 @@ public class SimulatorProxyService extends Service {
             jsonObj.put(Constants.ACTION_DATA, serializedMsg);
             List<Socket> socketList = Constants.TOPIC_SOCKET_MAP.get(topic);
             if (socketList != null) {
-                socketList.forEach(socket -> {
-                    try {
-                        PrintWriter wr = new PrintWriter(socket.getOutputStream());
-                        wr.println(jsonObj);
-                        wr.flush();
-                        Log.d(LOG_TAG, "Sending topic update to host: " + jsonObj);
+                synchronized (socketList) {
+                    Iterator<Socket> iterator = socketList.iterator();
+                    while (iterator.hasNext()) {
+                        Socket socket = iterator.next();
+                        try {
+                            PrintWriter wr = new PrintWriter(socket.getOutputStream());
+                            wr.println(jsonObj);
+                            wr.flush();
+                            Log.d(LOG_TAG, "Sending topic update to host: " + jsonObj);
 
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        // Log the exception and continue with the next socket
-                        Log.e(LOG_TAG, "Exception occurs while sending topic update to host", e);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            // Log the exception and continue with the next socket
+                            Log.e(LOG_TAG, "Exception occurs while sending topic update to host", e);
+                        }
                     }
-                });
+                }
             }
 
         } catch (JSONException e) {
